@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Member, Match, GameType, Rank } from '../types';
-import { Shuffle, Trophy, Upload, Plus, X, Copy } from 'lucide-react';
+import { Shuffle, Trophy, Upload, Plus, X, Copy, Users, User } from 'lucide-react';
 import ActionButtons from './ActionButtons';
 
 interface MatchesProps {
@@ -164,46 +164,6 @@ const Matches: React.FC<MatchesProps> = ({ members, matches, setMatches }) => {
     }));
   };
 
-  const handleUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if(!file) return;
-      
-      const reader = new FileReader();
-      reader.onload = (evt) => {
-          const text = evt.target?.result as string;
-          const lines = text.split('\n').slice(1);
-          const uploadedMatches: Match[] = [];
-          
-          lines.forEach((line, idx) => {
-             if(!line.trim()) return;
-             const cols = line.split(',');
-             const type = cols[0] as GameType;
-             
-             // Find members by name (Simple logic)
-             const findM = (name: string) => members.find(m => m.name === name.trim()) || { id: 'unknown', name: name, rank: Rank.BEGINNER } as Member;
-             
-             const team1 = [findM(cols[2])];
-             if(cols[3]) team1.push(findM(cols[3]));
-             
-             const team2 = [findM(cols[4])];
-             if(cols[5]) team2.push(findM(cols[5]));
-             
-             uploadedMatches.push({
-                 id: `upload-${Date.now()}-${idx}`,
-                 type,
-                 date: cols[1] || new Date().toISOString().split('T')[0],
-                 team1,
-                 team2,
-                 score1: parseInt(cols[6]) || 0,
-                 score2: parseInt(cols[7]) || 0
-             });
-          });
-          setMatches(prev => [...uploadedMatches, ...prev]);
-          alert(`${uploadedMatches.length}개의 경기가 업로드되었습니다.`);
-      };
-      reader.readAsText(file);
-  };
-
   // --- Copy for Google Sheets ---
   const handleCopyForSheet = () => {
       // Format: Date | Type | Winner Team Names | Loser Team Names | Score
@@ -253,6 +213,12 @@ const Matches: React.FC<MatchesProps> = ({ members, matches, setMatches }) => {
       setManualMatch({t1p1: '', t1p2: '', t2p1: '', t2p2: ''});
   };
 
+  const gameTypes = [
+    { type: GameType.MENS_DOUBLES, label: '남자복식', icon: Users },
+    { type: GameType.WOMENS_DOUBLES, label: '여자복식', icon: Users },
+    { type: GameType.MIXED_DOUBLES, label: '혼합복식', icon: Users },
+    { type: GameType.SINGLES, label: '단식', icon: User },
+  ];
 
   return (
     <div className="space-y-6">
@@ -272,36 +238,48 @@ const Matches: React.FC<MatchesProps> = ({ members, matches, setMatches }) => {
 
       {/* Control Panel (Hidden when printing) */}
       <div className="no-print bg-white p-4 rounded-xl shadow-sm border border-gray-200 space-y-4">
-        <div className="flex flex-wrap gap-4 items-center border-b border-gray-100 pb-4">
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-gray-700">종목:</span>
-            <select 
-              value={selectedType} 
-              onChange={(e) => setSelectedType(e.target.value as GameType)}
-              className="border rounded p-2 text-sm"
-            >
-              {Object.values(GameType).map(t => <option key={t} value={t}>{t}</option>)}
-            </select>
-          </div>
-          
-          <label className="flex items-center gap-2 text-sm cursor-pointer select-none">
+        
+        {/* Game Type Selection Buttons */}
+        <div className="flex flex-wrap gap-2 pb-4 border-b border-gray-100">
+            {gameTypes.map(({type, label, icon: Icon}) => (
+                <button
+                    key={type}
+                    onClick={() => setSelectedType(type)}
+                    className={`
+                        flex items-center gap-2 px-4 py-2 rounded-full text-sm font-bold transition-all
+                        ${selectedType === type 
+                            ? 'bg-orange-600 text-white shadow-md ring-2 ring-orange-200' 
+                            : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'
+                        }
+                    `}
+                >
+                    <Icon className="w-4 h-4" />
+                    {label}
+                </button>
+            ))}
+        </div>
+
+        <div className="flex flex-wrap gap-4 items-center justify-between">
+          <label className="flex items-center gap-2 text-sm cursor-pointer select-none bg-orange-50 px-3 py-1.5 rounded-lg border border-orange-100">
               <input type="checkbox" checked={matchByRank} onChange={e => setMatchByRank(e.target.checked)} className="rounded text-orange-600" />
-              <span>급수별 매칭 (비슷한 실력 우선)</span>
+              <span className="font-bold text-orange-800">급수별 매칭 (비슷한 실력 우선)</span>
           </label>
 
-          <button onClick={selectAll} className="text-sm text-blue-600 font-medium hover:underline">
-            전체 선택/해제
-          </button>
-          <div className="flex-1 text-right text-sm text-gray-500">
-            선택된 인원: <span className="font-bold text-orange-600">{selectedMemberIds.size}</span>명
+          <div className="flex items-center gap-4">
+            <button onClick={selectAll} className="text-sm text-blue-600 font-medium hover:underline">
+                전체 선택/해제
+            </button>
+            <div className="text-sm text-gray-500">
+                선택된 인원: <span className="font-bold text-orange-600 text-lg">{selectedMemberIds.size}</span>명
+            </div>
           </div>
         </div>
         
-        <div className="max-h-60 overflow-y-auto grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
+        <div className="max-h-60 overflow-y-auto grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 bg-gray-50 p-4 rounded-lg border border-gray-100">
           {eligibleMembers.map(member => (
             <label key={member.id} className={`
-              flex items-center gap-2 p-2 rounded border cursor-pointer text-sm transition-colors
-              ${selectedMemberIds.has(member.id) ? 'bg-orange-50 border-orange-200' : 'bg-gray-50 border-transparent'}
+              flex items-center gap-2 p-2 rounded border cursor-pointer text-sm transition-colors select-none
+              ${selectedMemberIds.has(member.id) ? 'bg-orange-100 border-orange-300 ring-1 ring-orange-300' : 'bg-white border-gray-200 hover:border-orange-200'}
             `}>
               <input 
                 type="checkbox" 
@@ -309,28 +287,38 @@ const Matches: React.FC<MatchesProps> = ({ members, matches, setMatches }) => {
                 onChange={() => toggleMember(member.id)}
                 className="rounded text-orange-600 focus:ring-orange-500"
               />
-              <div className="truncate">
-                  <span className="font-bold">{member.name}</span>
-                  <span className={`ml-1 text-xs px-1 rounded ${member.gender === 'M' ? 'bg-blue-100 text-blue-700' : 'bg-pink-100 text-pink-700'}`}>
-                      {member.rank}
-                  </span>
+              <div className="truncate flex-1">
+                  <span className="font-bold block truncate">{member.name}</span>
+                  <div className="flex items-center gap-1">
+                    <span className={`text-[10px] px-1 rounded ${member.gender === 'M' ? 'bg-blue-100 text-blue-700' : 'bg-pink-100 text-pink-700'}`}>
+                        {member.gender === 'M' ? '남' : '여'}
+                    </span>
+                    <span className="text-xs text-gray-500 font-medium bg-gray-100 px-1 rounded">
+                        {member.rank}
+                    </span>
+                  </div>
               </div>
             </label>
           ))}
-          {eligibleMembers.length === 0 && <div className="col-span-full text-center py-4 text-gray-400">해당 종목에 참여 가능한 회원이 없습니다.</div>}
+          {eligibleMembers.length === 0 && (
+            <div className="col-span-full text-center py-8 text-gray-400 flex flex-col items-center">
+                <Users className="w-8 h-8 mb-2 opacity-20" />
+                <p>해당 종목에 참여 가능한 회원이 없습니다.</p>
+            </div>
+          )}
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <button 
               onClick={generateBracket}
-              className="w-full bg-slate-800 text-white py-3 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-slate-900"
+              className="w-full bg-slate-900 text-white py-4 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-slate-800 shadow-lg shadow-slate-200 transition-transform active:scale-95"
             >
               <Shuffle className="w-5 h-5" />
               대진표 자동 생성
             </button>
             <button 
               onClick={() => setShowManualModal(true)}
-              className="w-full bg-white border-2 border-slate-200 text-slate-700 py-3 rounded-lg font-bold flex items-center justify-center gap-2 hover:bg-slate-50"
+              className="w-full bg-white border-2 border-slate-200 text-slate-700 py-4 rounded-xl font-bold flex items-center justify-center gap-2 hover:bg-slate-50 transition-colors"
             >
               <Plus className="w-5 h-5" />
               수동 경기 추가 (파트너 지정)
@@ -356,11 +344,18 @@ const Matches: React.FC<MatchesProps> = ({ members, matches, setMatches }) => {
               <div key={match.id} className="border border-slate-200 rounded-lg overflow-hidden break-inside-avoid">
                 <div className="bg-slate-100 px-4 py-2 flex justify-between items-center text-sm font-medium text-slate-600">
                   <span>Game {matches.length - idx}</span>
-                  <span className="px-2 py-0.5 bg-white rounded border text-xs">{match.type}</span>
+                  <span className={`px-2 py-0.5 rounded border text-xs ${
+                      match.type === GameType.MENS_DOUBLES ? 'bg-blue-50 text-blue-700 border-blue-100' :
+                      match.type === GameType.WOMENS_DOUBLES ? 'bg-pink-50 text-pink-700 border-pink-100' :
+                      match.type === GameType.MIXED_DOUBLES ? 'bg-purple-50 text-purple-700 border-purple-100' :
+                      'bg-gray-50 text-gray-700'
+                  }`}>
+                      {match.type}
+                  </span>
                 </div>
                 <div className="p-4 flex items-center justify-between gap-4">
                   {/* Team 1 */}
-                  <div className={`flex-1 text-center p-2 rounded cursor-pointer ${match.winner === 1 ? 'bg-orange-50 ring-2 ring-orange-200' : ''}`}
+                  <div className={`flex-1 text-center p-2 rounded cursor-pointer transition-colors ${match.winner === 1 ? 'bg-orange-50 ring-2 ring-orange-200' : 'hover:bg-gray-50'}`}
                        onClick={() => updateScore(match.id, 1, '25')} title="승리 처리 (간편)"
                   >
                     {match.team1.map(m => (
@@ -380,7 +375,7 @@ const Matches: React.FC<MatchesProps> = ({ members, matches, setMatches }) => {
                   <div className="font-bold text-slate-300">VS</div>
 
                   {/* Team 2 */}
-                  <div className={`flex-1 text-center p-2 rounded cursor-pointer ${match.winner === 2 ? 'bg-orange-50 ring-2 ring-orange-200' : ''}`}
+                  <div className={`flex-1 text-center p-2 rounded cursor-pointer transition-colors ${match.winner === 2 ? 'bg-orange-50 ring-2 ring-orange-200' : 'hover:bg-gray-50'}`}
                        onClick={() => updateScore(match.id, 2, '25')} title="승리 처리 (간편)"
                   >
                     {match.team2.map(m => (
