@@ -63,9 +63,13 @@ const LandingPage: React.FC<LandingPageProps> = ({ members, onLogin }) => {
       {/* Background Image with Overlay */}
       <div className="absolute inset-0 z-0 select-none">
           <img 
-            src="https://images.unsplash.com/photo-1626224583764-84786c719088?q=80&w=2070&auto=format&fit=crop" 
+            src="https://images.unsplash.com/photo-1626224583764-84786c71b221?q=80&w=2070&auto=format&fit=crop" 
             alt="Badminton Court" 
             className="w-full h-full object-cover opacity-60"
+            onError={(e) => {
+                // Fallback image (Abstract shuttlecock)
+                e.currentTarget.src = "https://images.unsplash.com/photo-1517506929974-9ae45799988a?q=80&w=2070&auto=format&fit=crop";
+            }}
           />
           {/* Dark Overlay for readability */}
           <div className="absolute inset-0 bg-gradient-to-b from-slate-900/80 via-slate-900/60 to-slate-900/90"></div>
@@ -87,7 +91,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ members, onLogin }) => {
            </div>
 
            <h2 className="text-sm md:text-lg font-medium text-orange-200 tracking-[0.3em] uppercase mb-4 opacity-80">
-             Sunrise of your new day
+             당신의 새로운 하루가 시작되는 곳
            </h2>
            
            <h1 className="font-serif-display text-6xl md:text-8xl lg:text-9xl font-black mb-6 tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-white via-orange-50 to-orange-200 drop-shadow-lg">
@@ -109,7 +113,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ members, onLogin }) => {
                 onClick={() => setShowLoginModal(true)}
                 className="group relative inline-flex items-center gap-4 px-12 py-5 bg-white/5 backdrop-blur-md border border-white/20 text-white rounded-full text-lg font-medium transition-all duration-300 hover:bg-white/15 hover:scale-105 hover:shadow-[0_0_40px_rgba(255,165,0,0.3)] hover:border-orange-500/50"
             >
-                <span className="tracking-widest text-sm font-bold">ENTER CLUB</span>
+                <span className="tracking-widest text-sm font-bold">클럽 입장하기</span>
                 <ArrowRight className="w-5 h-5 text-orange-400 group-hover:translate-x-2 transition-transform duration-300" />
             </button>
         </div>
