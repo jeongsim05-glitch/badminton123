@@ -108,13 +108,11 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({ targetId = 'page-content'
       });
       const targetEl = clonedDoc.getElementById(targetId);
       if (targetEl) {
-         targetEl.style.padding = '40px'; 
-         targetEl.style.width = 'fit-content';
-         if (targetEl.scrollWidth > clonedDoc.body.clientWidth) {
-             const newWidth = targetEl.scrollWidth + 100;
-             clonedDoc.body.style.width = `${newWidth}px`;
-             clonedDoc.body.style.minWidth = `${newWidth}px`;
-         }
+         targetEl.style.padding = '20px'; 
+         targetEl.style.width = '1000px'; // Set fixed width for better capture
+         targetEl.style.maxWidth = 'none';
+         // Ensure background is white
+         targetEl.style.backgroundColor = '#ffffff';
       }
   };
 
@@ -126,16 +124,17 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({ targetId = 'page-content'
             useCORS: true, 
             allowTaint: true, 
             scrollY: -window.scrollY,
-            windowWidth: document.documentElement.scrollWidth,
-            onclone: expandElements
+            windowWidth: 1200, // Fixed window width to prevent layout shifts
+            onclone: expandElements,
+            backgroundColor: '#ffffff'
         });
-        const imgData = canvas.toDataURL('image/png');
+        const imgData = canvas.toDataURL('image/jpeg', 0.95);
         const orientation = canvas.width > canvas.height ? 'l' : 'p';
         const pdf = new jsPDF(orientation, 'mm', 'a4');
         const imgProps = pdf.getImageProperties(imgData);
         const pdfWidth = pdf.internal.pageSize.getWidth();
         const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+        pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
         return pdf;
     } catch (err) {
         console.error(err);
@@ -146,12 +145,12 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({ targetId = 'page-content'
   // --- Handlers ---
 
   const handlePrint = async () => {
-    // Sandbox workaround: Since window.print() is blocked, generate PDF and ask user to print that.
+    // Sandbox workaround: Since window.print() is blocked/buggy on mobile PWA, use PDF approach
     setDialogState({
       isOpen: true,
       type: 'confirm',
       title: '인쇄 미리보기',
-      message: '현재 브라우저 보안 환경에서는 직접 인쇄 대화상자를 띄울 수 없습니다.\n\n대신 "인쇄용 PDF"를 생성하여 다운로드하시겠습니까?\n다운로드된 파일을 열어 인쇄해주세요.',
+      message: '현재 브라우저 보안 환경에서는 직접 인쇄 대화상자를 띄우기 어려울 수 있습니다.\n\n대신 "인쇄용 PDF"를 생성하여 다운로드하시겠습니까?\n다운로드된 파일을 열어 인쇄해주세요.',
       confirmText: 'PDF 다운로드',
       onConfirm: () => {
         closeDialog();
@@ -169,7 +168,10 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({ targetId = 'page-content'
       if (pdf) {
         pdf.save(`${fileName}_${new Date().toISOString().split('T')[0]}.pdf`);
       }
-    } catch(e) { console.error(e); }
+    } catch(e) { 
+        console.error(e);
+        alert('PDF 생성 중 오류가 발생했습니다.');
+    }
     finally { setLoading(null); }
   };
 
@@ -181,20 +183,30 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({ targetId = 'page-content'
       const canvas = await html2canvas(element, { 
           scale: 2, 
           useCORS: true, 
+          allowTaint: true,
           scrollY: -window.scrollY,
-          windowWidth: document.documentElement.scrollWidth,
-          onclone: expandElements
+          windowWidth: 1200,
+          onclone: expandElements,
+          backgroundColor: '#ffffff'
       });
+      
       const link = document.createElement('a');
-      link.download = `${fileName}_${new Date().toISOString().split('T')[0]}.png`;
-      link.href = canvas.toDataURL();
+      link.download = `${fileName}_${new Date().toISOString().split('T')[0]}.jpg`;
+      link.href = canvas.toDataURL('image/jpeg', 0.9);
+      
+      // Mobile Safari workaround: open in new tab if click fails
+      document.body.appendChild(link);
       link.click();
-    } catch(e) { console.error(e); }
+      document.body.removeChild(link);
+      
+    } catch(e) { 
+        console.error(e);
+        alert('이미지 저장 중 오류가 발생했습니다.');
+    }
     finally { setLoading(null); }
   };
 
   const handleDriveSave = () => {
-    // 1. Show Confirmation Modal (Replaces window.confirm)
     setDialogState({
       isOpen: true,
       type: 'confirm',
@@ -215,7 +227,6 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({ targetId = 'page-content'
       ),
       confirmText: '네, 드라이브 열기',
       onConfirm: async () => {
-        // 2. Open Drive immediately (Must be direct response to click)
         window.open(driveLink, '_blank');
         
         closeDialog();
@@ -226,17 +237,15 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({ targetId = 'page-content'
             if(!element) throw new Error("Target not found");
 
             // Give a small delay to let the tab open smoothly
-            await new Promise(resolve => setTimeout(resolve, 500));
+            await new Promise(resolve => setTimeout(resolve, 1000));
 
             const pdf = await createPdfBlob(element);
             
             if (pdf) {
-                // 3. Download the file
                 pdf.save(`${fileName}_${new Date().toISOString().split('T')[0]}.pdf`);
                 
                 setLoading(null);
                 
-                // 4. Show Success Modal
                 setDialogState({
                     isOpen: true,
                     type: 'success',
