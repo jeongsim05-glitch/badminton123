@@ -5,14 +5,18 @@ import ActionButtons from './ActionButtons';
 
 interface LessonsProps {
   members: Member[];
+  currentUser: Member | null;
 }
 
-const Lessons: React.FC<LessonsProps> = ({ members }) => {
+const Lessons: React.FC<LessonsProps> = ({ members, currentUser }) => {
   const [selectedDay, setSelectedDay] = useState<string>('월');
   const [lessonStatuses, setLessonStatuses] = useState<Record<string, 'completed' | 'cancelled'>>({});
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
   const weekDays = ['월', '화', '수', '목', '금'];
+
+  // Permission Check
+  const isExecutive = currentUser && ['회장', '부회장', '이사', '국장', '감사', '총무', '재무', '고문', '임원'].some(role => currentUser.position.includes(role));
   
   // Filter members for selected day
   const students = members.filter(m => m.lessonDays?.includes(selectedDay));
@@ -22,6 +26,8 @@ const Lessons: React.FC<LessonsProps> = ({ members }) => {
   };
 
   const toggleDateStatus = (day: number) => {
+      if (!isExecutive) return; // Only executives can change status
+
       const dateStr = `${currentMonth.getFullYear()}-${String(currentMonth.getMonth()+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
       setLessonStatuses(prev => {
           const current = prev[dateStr];
@@ -82,7 +88,7 @@ const Lessons: React.FC<LessonsProps> = ({ members }) => {
                                     <div className="text-xs text-indigo-500">{m.rank}조</div>
                                 </div>
                                 <span className="text-xs bg-white px-2 py-1 rounded text-gray-500 font-mono">
-                                    {m.phone.slice(-4)}
+                                    {isExecutive ? m.phone.slice(-4) : '****'}
                                 </span>
                             </div>
                         ))
@@ -126,13 +132,14 @@ const Lessons: React.FC<LessonsProps> = ({ members }) => {
                         return (
                             <div 
                             key={day} 
-                            onClick={() => !isWeekend && toggleDateStatus(day)}
+                            onClick={() => !isWeekend && isExecutive && toggleDateStatus(day)}
                             className={`
-                                h-24 rounded-lg border p-2 flex flex-col justify-between cursor-pointer transition-all
+                                h-24 rounded-lg border p-2 flex flex-col justify-between transition-all
                                 ${status === 'completed' ? 'bg-green-50 border-green-200' : 
                                     status === 'cancelled' ? 'bg-red-50 border-red-200' : 
-                                    'hover:border-orange-300 border-gray-100'}
+                                    'border-gray-100'}
                                 ${isWeekend ? 'bg-gray-100 opacity-50 cursor-default' : ''}
+                                ${isExecutive && !isWeekend ? 'cursor-pointer hover:border-orange-300' : 'cursor-default'}
                             `}
                             >
                                 <span className={`font-bold ${status ? 'text-gray-800' : 'text-gray-400'}`}>{day}</span>

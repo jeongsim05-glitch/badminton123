@@ -12,12 +12,16 @@ interface DocumentsProps {
   initialCarryover: number;
   monthlyFee: number;
   associateFee: number;
+  currentUser: Member | null;
 }
 
-const Documents: React.FC<DocumentsProps> = ({ members, expenses, notices, setNotices, records, donations, initialCarryover, monthlyFee, associateFee }) => {
+const Documents: React.FC<DocumentsProps> = ({ members, expenses, notices, setNotices, records, donations, initialCarryover, monthlyFee, associateFee, currentUser }) => {
   const [reportType, setReportType] = useState<'cover' | 'business' | 'settlement' | 'totals' | 'balance' | 'unpaid' | 'meeting'>('cover');
   const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().substring(0, 7)); // YYYY-MM
   const currentYear = parseInt(selectedMonth.split('-')[0]);
+
+  // Permission Check
+  const isExecutive = currentUser && ['회장', '부회장', '이사', '국장', '감사', '총무', '재무', '고문', '임원'].some(role => currentUser.position.includes(role));
 
   // --- Calculations for Monthly Report ---
   const year = parseInt(selectedMonth.split('-')[0]);
@@ -162,8 +166,8 @@ const Documents: React.FC<DocumentsProps> = ({ members, expenses, notices, setNo
         <ActionButtons targetId="documents-content" fileName={`해오름클럽_${reportType}`} />
       </div>
 
-      {/* Editor Section (No Print) - Only for Meeting */}
-      {reportType === 'meeting' && (
+      {/* Editor Section (No Print) - Only for Meeting & Executives */}
+      {reportType === 'meeting' && isExecutive && (
          <div className="no-print bg-white p-4 rounded-xl shadow-sm border border-gray-200 grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="space-y-1">
                <label className="text-sm font-bold">안건 (Club Operation)</label>

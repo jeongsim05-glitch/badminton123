@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Users, Receipt, Swords, BrainCircuit, Menu, FileText, BookOpen, Scale, ExternalLink, Settings, Video, Calendar, LogOut } from 'lucide-react';
+import { Users, Receipt, Swords, BrainCircuit, Menu, FileText, BookOpen, Scale, ExternalLink, Settings, Video, Calendar, LogOut, Cloud, RefreshCw, CheckCircle2 } from 'lucide-react';
 import { GlobalSettings, Member } from '../types';
 
 interface LayoutProps {
@@ -9,16 +9,15 @@ interface LayoutProps {
   settings: GlobalSettings;
   currentUser: Member | null;
   onLogout: () => void;
+  syncStatus?: 'synced' | 'saving' | 'error';
 }
 
-const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, settings, currentUser, onLogout }) => {
+const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, settings, currentUser, onLogout, syncStatus = 'synced' }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Permission Check Helpers
   const canAccessFinancials = (position: string) => {
-      // 재무이사, 총무이사만 가능 (요청사항 준수)
-      // 편의상 회장도 포함
-      return ['재무', '총무', '회장'].some(role => position.includes(role));
+      return ['재무', '총무', '회장', '임원'].some(role => position.includes(role));
   };
 
   const menuItems = [
@@ -38,7 +37,6 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, sett
     menuItems.push({ id: 'coaching', label: 'AI 레슨', icon: Video, restricted: false });
   }
   
-  // Settings is generally for admins, but we'll leave it accessible for now or restrict it
   menuItems.push({ id: 'admin', label: '환경 설정', icon: Settings, restricted: false });
 
   // Filter items based on permissions
@@ -137,6 +135,14 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, sett
         </nav>
 
         <div className="p-4 border-t border-slate-700 space-y-2">
+          {/* Sync Status Indicator */}
+          <div className="flex items-center justify-between bg-slate-800 p-2 rounded text-xs mb-2">
+              <span className="text-slate-400">데이터 동기화</span>
+              {syncStatus === 'saving' && <span className="flex items-center gap-1 text-yellow-400"><RefreshCw className="w-3 h-3 animate-spin"/> 저장 중...</span>}
+              {syncStatus === 'synced' && <span className="flex items-center gap-1 text-green-400"><CheckCircle2 className="w-3 h-3"/> 최신 상태</span>}
+              {syncStatus === 'error' && <span className="flex items-center gap-1 text-red-400">오류 발생</span>}
+          </div>
+
           <a 
             href="https://docs.google.com/spreadsheets/u/1/d/1t-ivTuXVCjD7Dm3rnsYOW1ylFQDyOe-Ij7iNT4jrgOM/edit?usp=drive_fs" 
             target="_blank" 
@@ -147,7 +153,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, setActiveTab, sett
             <span>구글 스프레드시트 열기</span>
           </a>
           <div className="text-xs text-slate-500 text-center">
-            &copy; 2024 Haeoreum Club
+            &copy; 2025 Haeoreum Club
           </div>
         </div>
       </aside>

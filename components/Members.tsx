@@ -28,7 +28,7 @@ const Members: React.FC<MembersProps> = ({ members, setMembers, currentUser }) =
   });
 
   // Permission Check
-  const isExecutive = currentUser && ['회장', '부회장', '이사', '국장', '감사', '총무', '재무', '고문'].some(role => currentUser.position.includes(role));
+  const isExecutive = currentUser && ['회장', '부회장', '이사', '국장', '감사', '총무', '재무', '고문', '임원'].some(role => currentUser.position.includes(role));
 
   const emptyMember: Member = {
     id: '',
@@ -43,6 +43,7 @@ const Members: React.FC<MembersProps> = ({ members, setMembers, currentUser }) =
     address: '',
     job: '',
     notes: '',
+    birthDate: '',
     isSickLeave: false,
     isFamilyMember: false,
     isCoupleMember: false,
@@ -87,7 +88,7 @@ const Members: React.FC<MembersProps> = ({ members, setMembers, currentUser }) =
 
   const handleDownloadExcel = () => {
       let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; // BOM for Korean
-      csvContent += "이름,구분,급수,성별,직책,전화번호,계좌번호,상태,레슨요일\n";
+      csvContent += "이름,성별,생년월일,전화번호,급수,직책,구분,계좌번호,상태,레슨요일\n";
       
       members.forEach(m => {
           const status = [];
@@ -97,11 +98,12 @@ const Members: React.FC<MembersProps> = ({ members, setMembers, currentUser }) =
           
           const row = [
               m.name,
-              m.memberType,
-              m.rank,
               m.gender === 'M' ? '남' : '여',
-              m.position,
+              m.birthDate || '',
               m.phone,
+              m.rank,
+              m.position,
+              m.memberType,
               m.accountNumber || '',
               status.join('/'),
               m.lessonDays ? m.lessonDays.join(' ') : ''
@@ -234,7 +236,7 @@ const Members: React.FC<MembersProps> = ({ members, setMembers, currentUser }) =
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
           <input 
             type="text" 
-            placeholder="이름 또는 전화번호 검색..." 
+            placeholder="이름 검색..." 
             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -246,13 +248,14 @@ const Members: React.FC<MembersProps> = ({ members, setMembers, currentUser }) =
             <thead className="bg-gray-50 text-gray-700 font-medium">
               <tr>
                 <th className="px-4 py-3 rounded-tl-lg">이름</th>
-                <th className="px-4 py-3">구분</th>
-                <th className="px-4 py-3">급수</th>
                 <th className="px-4 py-3">성별</th>
-                <th className="px-4 py-3">직책</th>
-                <th className="px-4 py-3">전화번호</th>
-                <th className="px-4 py-3 hidden md:table-cell">계좌번호</th>
-                <th className="px-4 py-3">상태</th>
+                <th className="px-4 py-3">생년월일</th>
+                {isExecutive && <th className="px-4 py-3">전화번호</th>}
+                <th className="px-4 py-3">급수</th>
+                {isExecutive && <th className="px-4 py-3">직책</th>}
+                {isExecutive && <th className="px-4 py-3">구분</th>}
+                {isExecutive && <th className="px-4 py-3 hidden md:table-cell">계좌번호</th>}
+                {isExecutive && <th className="px-4 py-3">상태</th>}
                 <th className="px-4 py-3">레슨</th>
                 {isExecutive && <th className="px-4 py-3 rounded-tr-lg text-right no-print">관리</th>}
               </tr>
@@ -264,11 +267,9 @@ const Members: React.FC<MembersProps> = ({ members, setMembers, currentUser }) =
                       {member.name}
                       {member.password && isExecutive && <Lock className="w-3 h-3 text-orange-400" title="임원 계정(비번설정됨)"/>}
                   </td>
-                  <td className="px-4 py-3">
-                    <span className={`text-xs px-2 py-1 rounded-full font-bold ${member.memberType === '정회원' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-600'}`}>
-                       {member.memberType}
-                    </span>
-                  </td>
+                  <td className="px-4 py-3">{member.gender === 'M' ? '남' : '여'}</td>
+                  <td className="px-4 py-3">{member.birthDate || '-'}</td>
+                  {isExecutive && <td className="px-4 py-3 text-gray-500">{member.phone}</td>}
                   <td className="px-4 py-3">
                     <span className={`
                       px-2 py-1 rounded text-xs font-bold
@@ -278,16 +279,23 @@ const Members: React.FC<MembersProps> = ({ members, setMembers, currentUser }) =
                       {member.rank}
                     </span>
                   </td>
-                  <td className="px-4 py-3">{member.gender === 'M' ? '남' : '여'}</td>
-                  <td className="px-4 py-3">{member.position}</td>
-                  <td className="px-4 py-3 text-gray-500">{member.phone}</td>
-                  <td className="px-4 py-3 text-gray-500 hidden md:table-cell">{member.accountNumber || '-'}</td>
+                  {isExecutive && <td className="px-4 py-3">{member.position}</td>}
+                  {isExecutive && (
+                  <td className="px-4 py-3">
+                    <span className={`text-xs px-2 py-1 rounded-full font-bold ${member.memberType === '정회원' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-600'}`}>
+                       {member.memberType}
+                    </span>
+                  </td>
+                  )}
+                  {isExecutive && <td className="px-4 py-3 text-gray-500 hidden md:table-cell">{member.accountNumber || '-'}</td>}
+                  {isExecutive && (
                   <td className="px-4 py-3">
                     <div className="flex gap-1 flex-wrap">
                       {member.isSickLeave && <span className="px-1.5 py-0.5 bg-yellow-100 text-yellow-800 text-xs rounded">병가</span>}
                       {member.isCoupleMember && <span className="px-1.5 py-0.5 bg-pink-100 text-pink-800 text-xs rounded">부부</span>}
                     </div>
                   </td>
+                  )}
                   <td className="px-4 py-3">
                       {member.lessonDays && member.lessonDays.length > 0 ? (
                           <div className="flex gap-1">
@@ -341,6 +349,10 @@ const Members: React.FC<MembersProps> = ({ members, setMembers, currentUser }) =
                   <option value="M">남성</option>
                   <option value="F">여성</option>
                 </select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-sm font-medium text-gray-700">생년월일</label>
+                <input type="date" value={formData.birthDate || ''} onChange={e => setFormData({...formData, birthDate: e.target.value})} className="w-full border p-2 rounded" />
               </div>
               <div className="space-y-1">
                 <label className="text-sm font-medium text-gray-700">전화번호</label>

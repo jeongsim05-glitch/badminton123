@@ -14,22 +14,33 @@ const LandingPage: React.FC<LandingPageProps> = ({ members, onLogin }) => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
-  // Logo Component
+  // Logo Component - Haeoreum Sun Theme
   const ClubLogo = () => (
     <svg width="100%" height="100%" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
       <defs>
-        <linearGradient id="sunGradBig" x1="0" y1="0" x2="0" y2="1">
+        <linearGradient id="sunGradLanding" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor="#fbbf24" />
           <stop offset="100%" stopColor="#ea580c" />
         </linearGradient>
+        <filter id="glow">
+          <feGaussianBlur stdDeviation="2.5" result="coloredBlur"/>
+          <feMerge>
+            <feMergeNode in="coloredBlur"/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
       </defs>
-      <circle cx="50" cy="40" r="28" fill="url(#sunGradBig)" />
-      <path d="M 15 65 Q 50 50 85 65" stroke="#fbbf24" strokeWidth="4" fill="none" strokeLinecap="round" />
+      
+      {/* Sun Body with Glow */}
+      <circle cx="50" cy="45" r="30" fill="url(#sunGradLanding)" filter="url(#glow)" />
+      
+      {/* Horizon Arc */}
+      <path d="M 15 70 Q 50 55 85 70" stroke="#fcd34d" strokeWidth="5" fill="none" strokeLinecap="round" filter="url(#glow)" />
     </svg>
   );
 
   const isExecutive = (position: string) => {
-    return ['회장', '부회장', '이사', '국장', '감사', '총무', '재무', '고문'].some(role => position.includes(role));
+    return ['회장', '부회장', '이사', '국장', '감사', '총무', '재무', '고문', '임원'].some(role => position.includes(role));
   };
 
   const handleMemberSelect = (member: Member) => {
@@ -59,25 +70,22 @@ const LandingPage: React.FC<LandingPageProps> = ({ members, onLogin }) => {
   );
 
   return (
-    <div className="relative min-h-screen overflow-hidden font-sans flex flex-col items-center justify-center bg-black">
-      {/* Background Image with Overlay */}
+    <div className="relative min-h-screen overflow-hidden font-sans flex flex-col items-center justify-center bg-slate-900">
+      {/* Background Image with Sporty Overlay */}
       <div className="absolute inset-0 z-0 select-none">
           <img 
-            src="https://images.unsplash.com/photo-1626224583764-84786c71b221?q=80&w=2070&auto=format&fit=crop" 
-            alt="Badminton Court" 
-            className="w-full h-full object-cover opacity-60"
+            src="https://images.unsplash.com/photo-1521537634581-0dced2fee2ef?q=80&w=2070&auto=format&fit=crop" 
+            alt="Badminton Net" 
+            className="w-full h-full object-cover opacity-40"
             onError={(e) => {
-                // Fallback image (Abstract shuttlecock)
-                e.currentTarget.src = "https://images.unsplash.com/photo-1517506929974-9ae45799988a?q=80&w=2070&auto=format&fit=crop";
+                e.currentTarget.src = "https://images.unsplash.com/photo-1626224583764-84786c71b221?q=80&w=2070&auto=format&fit=crop";
             }}
           />
-          {/* Dark Overlay for readability */}
-          <div className="absolute inset-0 bg-gradient-to-b from-slate-900/80 via-slate-900/60 to-slate-900/90"></div>
+          {/* Green/Blue Gradient Overlay for Badminton Court Feel */}
+          <div className="absolute inset-0 bg-gradient-to-br from-green-900/80 via-slate-900/80 to-blue-900/80"></div>
           
-          {/* Giant Watermark Logo Background */}
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120vw] h-[120vw] md:w-[800px] md:h-[800px] opacity-10 blur-sm pointer-events-none animate-in spin-in-180 duration-[30s]">
-              <ClubLogo />
-          </div>
+          {/* Subtle Grid Pattern */}
+          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')] opacity-20"></div>
       </div>
 
       {/* Main Content */}
@@ -85,45 +93,47 @@ const LandingPage: React.FC<LandingPageProps> = ({ members, onLogin }) => {
         
         {/* Brand Section */}
         <div className="flex flex-col items-center animate-in fade-in slide-in-from-bottom-8 duration-1000">
-           {/* Small Logo Icon */}
-           <div className="w-20 h-20 md:w-24 md:h-24 mb-8 drop-shadow-[0_0_25px_rgba(234,88,12,0.6)]">
+           {/* Logo Icon */}
+           <div className="w-24 h-24 md:w-32 md:h-32 mb-6 drop-shadow-[0_0_15px_rgba(255,255,255,0.3)] hover:scale-105 transition-transform duration-500">
              <ClubLogo />
            </div>
 
-           <h2 className="text-sm md:text-lg font-medium text-orange-200 tracking-[0.3em] uppercase mb-4 opacity-80">
+           <h2 className="text-sm md:text-base font-bold text-green-300 tracking-[0.3em] uppercase mb-4">
              당신의 새로운 하루가 시작되는 곳
            </h2>
            
-           <h1 className="font-serif-display text-6xl md:text-8xl lg:text-9xl font-black mb-6 tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-white via-orange-50 to-orange-200 drop-shadow-lg">
-             Haeoreum
+           <h1 className="font-sans text-5xl md:text-7xl lg:text-8xl font-black mb-2 tracking-tighter text-white drop-shadow-2xl italic">
+             HAEOREUM
            </h1>
+           <p className="text-2xl md:text-3xl font-light text-slate-300 tracking-widest uppercase mb-10">
+             Badminton Club
+           </p>
            
-           <div className="flex items-center gap-4 w-full justify-center">
-               <div className="h-[1px] w-12 md:w-24 bg-gradient-to-r from-transparent to-white/40"></div>
-               <p className="text-2xl md:text-4xl font-light tracking-[0.15em] text-white/90 uppercase font-serif-display">
-                 Badminton Club
-               </p>
-               <div className="h-[1px] w-12 md:w-24 bg-gradient-to-l from-transparent to-white/40"></div>
+           {/* Decorative Lines */}
+           <div className="flex items-center gap-2 w-32 mb-12 opacity-50">
+               <div className="h-1 flex-1 bg-green-500 rounded-full"></div>
+               <div className="h-1 w-2 bg-white rounded-full"></div>
+               <div className="h-1 flex-1 bg-blue-500 rounded-full"></div>
            </div>
         </div>
 
         {/* Enter Button */}
-        <div className="mt-20 animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-300">
+        <div className="animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-300">
             <button 
                 onClick={() => setShowLoginModal(true)}
-                className="group relative inline-flex items-center gap-4 px-12 py-5 bg-white/5 backdrop-blur-md border border-white/20 text-white rounded-full text-lg font-medium transition-all duration-300 hover:bg-white/15 hover:scale-105 hover:shadow-[0_0_40px_rgba(255,165,0,0.3)] hover:border-orange-500/50"
+                className="group relative inline-flex items-center gap-4 px-10 py-4 bg-white text-slate-900 rounded-full text-lg font-bold transition-all duration-300 hover:bg-green-400 hover:text-white hover:scale-105 hover:shadow-[0_0_30px_rgba(74,222,128,0.5)]"
             >
-                <span className="tracking-widest text-sm font-bold">클럽 입장하기</span>
-                <ArrowRight className="w-5 h-5 text-orange-400 group-hover:translate-x-2 transition-transform duration-300" />
+                <span className="tracking-widest">클럽 입장하기</span>
+                <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </button>
         </div>
 
         <div className="absolute -bottom-32 md:-bottom-40 left-0 right-0 text-center">
-            <p className="text-[10px] text-slate-500 font-light tracking-[0.2em] uppercase mb-2">
-                EST. 2024 • BORYEONG CITY
+            <p className="text-[10px] text-slate-400 font-bold tracking-[0.2em] uppercase mb-2">
+                EST. 2025 • BORYEONG CITY
             </p>
             <p className="text-[10px] text-slate-600">
-                Authorized Personnel Only
+                Official Member Management System
             </p>
         </div>
       </div>
@@ -136,17 +146,17 @@ const LandingPage: React.FC<LandingPageProps> = ({ members, onLogin }) => {
             {!selectedMember ? (
                 // Step 1: Select Member
                 <>
-                    <div className="p-6 bg-slate-50 border-b">
-                        <h2 className="text-xl font-bold text-slate-800 font-serif-display">Member Login</h2>
-                        <p className="text-xs text-gray-500 mt-1 uppercase tracking-wider">Select your profile to continue</p>
+                    <div className="p-6 bg-slate-900 text-white border-b border-slate-800">
+                        <h2 className="text-xl font-bold">회원 로그인</h2>
+                        <p className="text-xs text-slate-400 mt-1 uppercase tracking-wider">본인의 이름을 검색하세요</p>
                     </div>
                     <div className="p-4 border-b bg-white">
                         <div className="relative group">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 group-focus-within:text-orange-500 transition-colors" />
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5 group-focus-within:text-green-600 transition-colors" />
                             <input 
                                 type="text" 
-                                placeholder="이름 검색 (Search Name)" 
-                                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 outline-none bg-gray-50 transition-all"
+                                placeholder="이름 검색 (예: 홍길동)" 
+                                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-green-500/20 focus:border-green-500 outline-none bg-gray-50 transition-all font-medium"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 autoFocus
@@ -158,15 +168,15 @@ const LandingPage: React.FC<LandingPageProps> = ({ members, onLogin }) => {
                             <button 
                                 key={member.id}
                                 onClick={() => handleMemberSelect(member)}
-                                className="w-full flex items-center justify-between p-3 hover:bg-orange-50 rounded-xl transition-all text-left group border border-transparent hover:border-orange-100"
+                                className="w-full flex items-center justify-between p-3 hover:bg-green-50 rounded-xl transition-all text-left group border border-transparent hover:border-green-100"
                             >
                                 <div className="flex items-center gap-3">
-                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shadow-sm ${isExecutive(member.position) ? 'bg-slate-800 text-white' : 'bg-gray-100 text-gray-500 group-hover:bg-white group-hover:text-orange-600'}`}>
+                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shadow-sm ${isExecutive(member.position) ? 'bg-slate-800 text-white' : 'bg-gray-100 text-gray-500 group-hover:bg-white group-hover:text-green-600'}`}>
                                         {member.name.slice(0,1)}
                                     </div>
                                     <div>
-                                        <div className="font-bold text-gray-800 group-hover:text-orange-700">{member.name}</div>
-                                        <div className="text-xs text-gray-400 group-hover:text-orange-400">{member.position} • {member.rank}조</div>
+                                        <div className="font-bold text-gray-800 group-hover:text-green-700">{member.name}</div>
+                                        <div className="text-xs text-gray-400 group-hover:text-green-600">{member.position} • {member.rank}조</div>
                                     </div>
                                 </div>
                                 {isExecutive(member.position) && <Lock className="w-3 h-3 text-gray-300" />}
@@ -177,23 +187,23 @@ const LandingPage: React.FC<LandingPageProps> = ({ members, onLogin }) => {
                         )}
                     </div>
                     <div className="p-4 border-t bg-gray-50 text-center">
-                        <button onClick={() => setShowLoginModal(false)} className="text-gray-400 hover:text-gray-800 text-xs font-bold uppercase tracking-widest transition-colors">Close</button>
+                        <button onClick={() => setShowLoginModal(false)} className="text-gray-400 hover:text-gray-800 text-xs font-bold uppercase tracking-widest transition-colors">닫기</button>
                     </div>
                 </>
             ) : (
                 // Step 2: Password (If Executive)
                 <form onSubmit={handlePasswordLogin} className="p-8 flex flex-col items-center bg-white">
-                    <div className="w-16 h-16 bg-orange-50 rounded-full flex items-center justify-center mb-6 ring-4 ring-orange-50">
-                        <Lock className="w-6 h-6 text-orange-600" />
+                    <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mb-6 ring-4 ring-slate-50">
+                        <Lock className="w-6 h-6 text-slate-600" />
                     </div>
-                    <h3 className="text-2xl font-bold text-gray-900 mb-2 font-serif-display">{selectedMember.name}</h3>
-                    <p className="text-xs text-gray-400 mb-8 uppercase tracking-widest">Administrator Access Required</p>
+                    <h3 className="text-2xl font-bold text-gray-900 mb-1">{selectedMember.name}</h3>
+                    <p className="text-xs text-blue-600 font-bold mb-8 uppercase tracking-widest bg-blue-50 px-2 py-1 rounded">관리자 인증 필요</p>
                     
                     <div className="w-full relative">
                         <input 
                             type="password" 
-                            placeholder="Password" 
-                            className="w-full text-center text-lg px-4 py-4 border-b-2 border-gray-200 focus:border-orange-500 outline-none mb-6 tracking-[0.5em] bg-transparent transition-colors placeholder:tracking-normal placeholder:text-gray-300"
+                            placeholder="비밀번호 입력" 
+                            className="w-full text-center text-lg px-4 py-4 border-b-2 border-gray-200 focus:border-slate-800 outline-none mb-6 tracking-[0.5em] bg-transparent transition-colors placeholder:tracking-normal placeholder:text-gray-300"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                             autoFocus
@@ -210,14 +220,14 @@ const LandingPage: React.FC<LandingPageProps> = ({ members, onLogin }) => {
                         type="submit"
                         className="w-full bg-slate-900 text-white py-4 rounded-xl font-bold hover:bg-slate-800 transition-all shadow-lg shadow-slate-200"
                     >
-                        LOGIN
+                        로그인
                     </button>
                     <button 
                         type="button"
                         onClick={() => setSelectedMember(null)}
                         className="mt-6 text-gray-400 hover:text-gray-600 text-xs underline"
                     >
-                        Back to Selection
+                        뒤로 가기
                     </button>
                 </form>
             )}

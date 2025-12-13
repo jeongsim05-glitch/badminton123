@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import LandingPage from './components/LandingPage';
 import Layout from './components/Layout';
 import Members from './components/Members';
@@ -12,23 +12,15 @@ import AdminSettings from './components/AdminSettings';
 import Coaching from './components/Coaching';
 import Attendance from './components/Attendance';
 import { Member, Match, Rank, Expense, Notice, FinancialRecord, Donation, GameType, GlobalSettings, AttendanceRecord } from './types';
-
-// Storage Keys
-const KEYS = {
-  MEMBERS: 'haeoreum_members',
-  RECORDS: 'haeoreum_records',
-  MATCHES: 'haeoreum_matches',
-  EXPENSES: 'haeoreum_expenses',
-  DONATIONS: 'haeoreum_donations',
-  NOTICES: 'haeoreum_notices',
-  SETTINGS: 'haeoreum_settings',
-  ATTENDANCE: 'haeoreum_attendance',
-};
+import { loadAllData, saveData } from './services/sheetService';
+import { Loader2 } from 'lucide-react';
 
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<Member | null>(null);
   const [activeTab, setActiveTab] = useState('members');
   const [isLoaded, setIsLoaded] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [syncStatus, setSyncStatus] = useState<'synced' | 'saving' | 'error'>('synced');
   
   // -- Global Settings --
   const [settings, setSettings] = useState<GlobalSettings>({
@@ -48,87 +40,12 @@ const App: React.FC = () => {
   const [notices, setNotices] = useState<Notice[]>([]);
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
 
-  // --- 1. Load Data on Mount ---
-  useEffect(() => {
-    const loadData = () => {
-        try {
-            const savedMembers = localStorage.getItem(KEYS.MEMBERS);
-            const savedRecords = localStorage.getItem(KEYS.RECORDS);
-            const savedMatches = localStorage.getItem(KEYS.MATCHES);
-            const savedExpenses = localStorage.getItem(KEYS.EXPENSES);
-            const savedDonations = localStorage.getItem(KEYS.DONATIONS);
-            const savedNotices = localStorage.getItem(KEYS.NOTICES);
-            const savedSettings = localStorage.getItem(KEYS.SETTINGS);
-            const savedAttendance = localStorage.getItem(KEYS.ATTENDANCE);
+  // Refs for debouncing saves
+  const timeoutRef = useRef<{[key: string]: ReturnType<typeof setTimeout>}>({});
 
-            if (savedMembers) {
-                // Load from storage
-                setMembers(JSON.parse(savedMembers));
-                if (savedRecords) setFinancialRecords(JSON.parse(savedRecords));
-                if (savedMatches) setMatches(JSON.parse(savedMatches));
-                if (savedExpenses) setExpenses(JSON.parse(savedExpenses));
-                if (savedDonations) setDonations(JSON.parse(savedDonations));
-                if (savedNotices) setNotices(JSON.parse(savedNotices));
-                if (savedSettings) setSettings(JSON.parse(savedSettings));
-                if (savedAttendance) setAttendanceRecords(JSON.parse(savedAttendance));
-            } else {
-                // Initialize with Demo Data
-                generateDemoData();
-            }
-        } catch (e) {
-            console.error("Failed to load data", e);
-            generateDemoData();
-        } finally {
-            setIsLoaded(true);
-        }
-    };
-
-    loadData();
-  }, []);
-
-  // --- 2. Save Data on Change ---
-  useEffect(() => {
-      if (!isLoaded) return;
-      localStorage.setItem(KEYS.MEMBERS, JSON.stringify(members));
-  }, [members, isLoaded]);
-
-  useEffect(() => {
-      if (!isLoaded) return;
-      localStorage.setItem(KEYS.RECORDS, JSON.stringify(financialRecords));
-  }, [financialRecords, isLoaded]);
-
-  useEffect(() => {
-      if (!isLoaded) return;
-      localStorage.setItem(KEYS.MATCHES, JSON.stringify(matches));
-  }, [matches, isLoaded]);
-
-  useEffect(() => {
-      if (!isLoaded) return;
-      localStorage.setItem(KEYS.EXPENSES, JSON.stringify(expenses));
-  }, [expenses, isLoaded]);
-
-  useEffect(() => {
-      if (!isLoaded) return;
-      localStorage.setItem(KEYS.DONATIONS, JSON.stringify(donations));
-  }, [donations, isLoaded]);
-
-  useEffect(() => {
-      if (!isLoaded) return;
-      localStorage.setItem(KEYS.NOTICES, JSON.stringify(notices));
-  }, [notices, isLoaded]);
-
-  useEffect(() => {
-      if (!isLoaded) return;
-      localStorage.setItem(KEYS.SETTINGS, JSON.stringify(settings));
-  }, [settings, isLoaded]);
-
-  useEffect(() => {
-      if (!isLoaded) return;
-      localStorage.setItem(KEYS.ATTENDANCE, JSON.stringify(attendanceRecords));
-  }, [attendanceRecords, isLoaded]);
-
-
-  const generateDemoData = () => {
+  // --- Generate Demo Data Helper ---
+  const generateDemoData = async () => {
+    console.log("Generating Demo Data and uploading to Sheet...");
     // Digitized data from the provided images (103 Regular + 6 Associate)
     const rawData = [
       // --- Regular Members (정회원) ---
@@ -138,7 +55,7 @@ const App: React.FC = () => {
       { id: '4', name: '고주이', type: '정회원', joinDate: '2020-01-01', status: '연납' },
       { id: '5', name: '김경아', type: '정회원', joinDate: '2025-06-06', status: {6:'신규', 7:'면제', 8:'면제'} },
       { id: '6', name: '김경윤', type: '정회원', joinDate: '2020-01-01', status: {1:'O',2:'O',3:'O',4:'O',5:'O',6:'O',7:'O',8:'O'} },
-      { id: '7', name: '김동수', type: '정회원', joinDate: '2020-01-01', status: {1:'O',2:'O',3:'O',4:'O',5:'O',6:'O',7:'O',8:'O',9:'O',10:'O',11:'O',12:'O'} }, // 완료 -> Full pay
+      { id: '7', name: '김동수', type: '정회원', joinDate: '2020-01-01', status: {1:'O',2:'O',3:'O',4:'O',5:'O',6:'O',7:'O',8:'O',9:'O',10:'O',11:'O',12:'O'} },
       { id: '8', name: '김동주', type: '정회원', joinDate: '2020-01-01', status: '연납' },
       { id: '9', name: '김동준', type: '정회원', joinDate: '2020-01-01', status: {1:'O',2:'O',3:'O',4:'O',5:'O',6:'O',7:'O',8:'O',9:'O',10:'O'} },
       { id: '10', name: '김동환', type: '정회원', joinDate: '2020-01-01', status: {1:'O',2:'O',3:'O',4:'O',5:'O',6:'O',7:'병가',8:'병가',9:'병가',10:'병가'} },
@@ -249,23 +166,36 @@ const App: React.FC = () => {
     const initRecords: Record<string, FinancialRecord> = {};
     const weekDays = ['월', '화', '수', '목', '금'];
 
+    const executiveMap: Record<string, string> = {
+        '장경진': '임원',
+        '채동호': '임원',
+        '김동주': '임원',
+        '김성남': '임원',
+        '김현민': '임원',
+        '김중진': '임원',
+        '박미화': '임원',
+        '배수미': '임원',
+        '김순희': '임원',
+        '우명자': '임원',
+        '김현종': '임원'
+    };
+
     rawData.forEach((data, index) => {
-       // 1. Create Member
        const hasLessons = Math.random() > 0.7;
        const lessonDays = hasLessons ? [weekDays[Math.floor(Math.random() * 5)]] : [];
        
        let position = data.type === '준회원' ? '준회원' : '회원';
        let password = undefined;
        
-       if (data.id === '1') { position = '회장'; password = '1234'; }
-       else if (data.id === '2') { position = '부회장'; password = '1234'; }
-       else if (data.id === '3') { position = '사무국장'; password = '1234'; }
-       else if (data.id === '4') { position = '재무이사'; password = '1234'; }
-       else if (data.id === '5') { position = '총무이사'; password = '1234'; }
-       else if (data.id === '6') { position = '경기이사'; password = '1234'; }
-       else if (data.id === '7') { position = '홍보이사'; password = '1234'; }
-       else if (data.id === '8') { position = '관리이사'; password = '1234'; }
-       else if (data.id === '9') { position = '감사'; password = '1234'; }
+       if (executiveMap[data.name]) {
+           position = executiveMap[data.name];
+           password = '1234';
+       }
+
+       const birthYear = 1970 + Math.floor(Math.random() * 30);
+       const birthMonth = String(Math.floor(Math.random() * 12) + 1).padStart(2, '0');
+       const birthDay = String(Math.floor(Math.random() * 28) + 1).padStart(2, '0');
+       const birthDate = `${birthYear}-${birthMonth}-${birthDay}`;
 
        const member: Member = {
           id: data.id,
@@ -274,6 +204,7 @@ const App: React.FC = () => {
           position: position,
           password: password,
           memberType: data.type as '정회원' | '준회원',
+          birthDate: birthDate,
           joinDate: data.joinDate,
           tenure: '1년',
           phone: `010-0000-${String(index).padStart(4,'0')}`,
@@ -289,7 +220,6 @@ const App: React.FC = () => {
        };
        initMembers.push(member);
 
-       // 2. Create Financial Record
        const fee = data.type === '준회원' ? 15000 : 30000;
        const payments: { [month: number]: number } = {};
        const exemptMonths: number[] = [];
@@ -315,36 +245,100 @@ const App: React.FC = () => {
 
     setMembers(initMembers);
     setFinancialRecords(initRecords);
-
-    // Initialize matches
-    if (initMembers.length > 10) {
-        const history: Match[] = [];
-        for(let i=0; i<20; i++) {
-            const m1 = initMembers[i];
-            const m2 = initMembers[i+1];
-            const m3 = initMembers[i+2];
-            const m4 = initMembers[i+3];
-            
-            history.push({
-                id: `history-${i}`,
-                type: GameType.MENS_DOUBLES,
-                team1: [m1, m2],
-                team2: [m3, m4],
-                date: '2025-01-01',
-                winner: Math.random() > 0.5 ? 1 : 2,
-                score1: 25,
-                score2: 23
-            });
-        }
-        setMatches(history);
-    }
     
-    // Reset others
-    setExpenses([]);
-    setDonations([]);
-    setNotices([]);
-    setAttendanceRecords([]);
+    // Save generated data to sheet immediately
+    await saveData('members', initMembers);
+    await saveData('financialRecords', Object.values(initRecords));
   };
+
+
+  // --- 1. Load Data on Mount (From Sheet) ---
+  useEffect(() => {
+    const initData = async () => {
+        setIsLoading(true);
+        const data = await loadAllData();
+        
+        if (data && data.members && data.members.length > 0) {
+            setMembers(data.members || []);
+            setMatches(data.matches || []);
+            setExpenses(data.expenses || []);
+            setDonations(data.donations || []);
+            setNotices(data.notices || []);
+            setAttendanceRecords(data.attendance || []);
+            if (data.settings) setSettings(prev => ({...prev, ...data.settings}));
+
+            // Transform financial array back to Record object
+            const recordsObj: Record<string, FinancialRecord> = {};
+            if (Array.isArray(data.financialRecords)) {
+                data.financialRecords.forEach((rec: any) => {
+                    recordsObj[rec.memberId] = rec;
+                });
+            }
+            setFinancialRecords(recordsObj);
+        } else {
+            // If data is empty (first run with new sheet), generate and upload demo data
+            await generateDemoData();
+        }
+        setIsLoaded(true);
+        setIsLoading(false);
+    };
+
+    initData();
+  }, []);
+
+  // --- 2. Save Data on Change (Debounced) ---
+  const debouncedSave = (table: string, data: any) => {
+      setSyncStatus('saving');
+      if (timeoutRef.current[table]) clearTimeout(timeoutRef.current[table]);
+      
+      timeoutRef.current[table] = setTimeout(async () => {
+          await saveData(table, data);
+          setSyncStatus('synced');
+      }, 2000); // Wait 2 seconds of inactivity before saving
+  };
+
+  useEffect(() => {
+      if (!isLoaded) return;
+      debouncedSave('members', members);
+  }, [members, isLoaded]);
+
+  useEffect(() => {
+      if (!isLoaded) return;
+      // Convert Record back to Array for storage
+      const recordsArray = Object.values(financialRecords);
+      debouncedSave('financialRecords', recordsArray);
+  }, [financialRecords, isLoaded]);
+
+  useEffect(() => {
+      if (!isLoaded) return;
+      debouncedSave('matches', matches);
+  }, [matches, isLoaded]);
+
+  useEffect(() => {
+      if (!isLoaded) return;
+      debouncedSave('expenses', expenses);
+  }, [expenses, isLoaded]);
+
+  useEffect(() => {
+      if (!isLoaded) return;
+      debouncedSave('donations', donations);
+  }, [donations, isLoaded]);
+
+  useEffect(() => {
+      if (!isLoaded) return;
+      debouncedSave('notices', notices);
+  }, [notices, isLoaded]);
+
+  useEffect(() => {
+      if (!isLoaded) return;
+      debouncedSave('settings', [settings]); // Settings as single row array
+  }, [settings, isLoaded]);
+
+  useEffect(() => {
+      if (!isLoaded) return;
+      debouncedSave('attendance', attendanceRecords);
+  }, [attendanceRecords, isLoaded]);
+
 
   const renderContent = () => {
     switch (activeTab) {
@@ -369,7 +363,7 @@ const App: React.FC = () => {
             setInitialCarryover={(val) => setSettings({...settings, initialCarryover: val as number})}
         />;
       case 'lessons':
-        return <Lessons members={members} />;
+        return <Lessons members={members} currentUser={currentUser} />;
       case 'documents':
         return <Documents 
             members={members} 
@@ -381,9 +375,10 @@ const App: React.FC = () => {
             initialCarryover={settings.initialCarryover}
             monthlyFee={settings.monthlyFee}
             associateFee={settings.associateFee}
+            currentUser={currentUser}
         />;
       case 'bylaws':
-        return <Bylaws />;
+        return <Bylaws currentUser={currentUser} />;
       case 'analysis':
         return <Analysis members={members} matches={matches} />;
       case 'coaching':
@@ -399,6 +394,7 @@ const App: React.FC = () => {
 
   // If not logged in, show Landing Page
   if (!currentUser) {
+      if (isLoading) return <div className="h-screen flex items-center justify-center flex-col gap-4 bg-slate-900 text-white"><Loader2 className="w-10 h-10 animate-spin text-orange-500"/><p>서버와 데이터를 동기화 중입니다...</p><p className="text-xs text-slate-500">최초 실행 시 데이터 생성에 시간이 걸릴 수 있습니다.</p></div>;
       return <LandingPage members={members} onLogin={setCurrentUser} />;
   }
 
@@ -409,6 +405,7 @@ const App: React.FC = () => {
         settings={settings} 
         currentUser={currentUser}
         onLogout={() => setCurrentUser(null)}
+        syncStatus={syncStatus}
     >
       {renderContent()}
     </Layout>

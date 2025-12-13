@@ -1,6 +1,11 @@
 import React, { useState } from 'react';
 import { Scale, Edit3 } from 'lucide-react';
 import ActionButtons from './ActionButtons';
+import { Member } from '../types';
+
+interface BylawsProps {
+  currentUser: Member | null;
+}
 
 interface BylawArticle {
   id: string;
@@ -45,11 +50,14 @@ const initialBylaws: BylawArticle[] = [
   { id: 'addenda', title: '[시행]', content: '1. 본 회칙은 2025년 01월 01일부터 시행한다.' },
 ];
 
-const Bylaws: React.FC = () => {
+const Bylaws: React.FC<BylawsProps> = ({ currentUser }) => {
   const [bylaws, setBylaws] = useState<BylawArticle[]>(initialBylaws);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [showComparison, setShowComparison] = useState(false);
   const [revisionDate, setRevisionDate] = useState(new Date().toISOString().split('T')[0]);
+
+  // Permission Check
+  const isExecutive = currentUser && ['회장', '부회장', '이사', '국장', '감사', '총무', '재무', '고문', '임원'].some(role => currentUser.position.includes(role));
 
   const handleEdit = (id: string, newContent: string) => {
     setBylaws(prev => prev.map(item => {
@@ -139,22 +147,26 @@ const Bylaws: React.FC = () => {
                    <h1 className="text-2xl font-serif font-bold text-slate-800">해오름 배드민턴클럽 회칙</h1>
                    <p className="text-xs text-slate-500 mt-1">시행일: 2025.01.01 | 개정번호: 01</p>
                 </div>
+                {isExecutive && (
                 <div className="text-right no-print">
                     <label className="text-xs text-gray-500 block mb-1">개정 기준일 설정</label>
                     <input type="date" value={revisionDate} onChange={(e) => setRevisionDate(e.target.value)} className="border rounded p-1 text-sm" />
                 </div>
+                )}
             </div>
             <div className="divide-y divide-gray-100">
                 {bylaws.map((article) => (
                     <div key={article.id} className={`p-6 hover:bg-gray-50 transition-colors ${article.isModified ? 'bg-yellow-50' : ''}`}>
                         <div className="flex justify-between items-start mb-2">
                             <h3 className="font-bold text-lg text-slate-800">{article.title}</h3>
+                            {isExecutive && (
                             <button 
                                 onClick={() => setEditingId(editingId === article.id ? null : article.id)}
                                 className="text-gray-400 hover:text-blue-600 p-1 no-print"
                             >
                                 <Edit3 className="w-4 h-4" />
                             </button>
+                            )}
                         </div>
                         {editingId === article.id ? (
                             <div className="no-print">
@@ -175,12 +187,14 @@ const Bylaws: React.FC = () => {
                         {article.isModified && (
                             <div className="mt-2 text-xs text-orange-600 font-bold flex items-center gap-1">
                                 * 수정됨 (대비표에서 확인 가능)
+                                {isExecutive && (
                                 <button 
                                     onClick={() => handleEdit(article.id, article.originalContent || article.content)}
                                     className="ml-2 text-gray-400 hover:text-gray-600 underline no-print"
                                 >
                                     되돌리기
                                 </button>
+                                )}
                             </div>
                         )}
                     </div>

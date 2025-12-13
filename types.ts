@@ -20,6 +20,7 @@ export interface Member {
   position: string; // 직책 (회장, 재무이사, 총무이사, 경기이사, 회원 등)
   password?: string; // 로그인용 비밀번호 (임원용)
   memberType: '정회원' | '준회원';
+  birthDate: string; // 생년월일 (YYYY-MM-DD)
   joinDate: string;
   tenure: string; // 클럽근속일
   phone: string;
