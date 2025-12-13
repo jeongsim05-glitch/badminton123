@@ -249,6 +249,27 @@ const App: React.FC = () => {
     // Save generated data to sheet immediately
     await saveData('members', initMembers);
     await saveData('financialRecords', Object.values(initRecords));
+
+    // Save initial settings to ensure '환경설정' tab is created
+    const defaultSettings: GlobalSettings = {
+        monthlyFee: 30000,
+        associateFee: 15000,
+        initialCarryover: 5659886,
+        enableAICoaching: false,
+        enableAttendance: false
+    };
+    await saveData('settings', [defaultSettings]);
+
+    // Save a welcome notice to ensure '공지사항' tab is created
+    const welcomeNotice: Notice = {
+        id: 'notice-welcome',
+        month: new Date().toISOString().slice(0, 7),
+        agenda: '해오름클럽 매니저 사용을 환영합니다!',
+        events: '앱이 스프레드시트와 성공적으로 연동되었습니다.',
+        nextSchedule: ''
+    };
+    await saveData('notices', [welcomeNotice]);
+    setNotices([welcomeNotice]);
   };
 
 
