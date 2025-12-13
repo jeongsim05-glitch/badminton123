@@ -13,7 +13,7 @@ import Coaching from './components/Coaching';
 import Attendance from './components/Attendance';
 import { Member, Match, Rank, Expense, Notice, FinancialRecord, Donation, GameType, GlobalSettings, AttendanceRecord } from './types';
 import { loadAllData, saveData } from './services/sheetService';
-import { Loader2 } from 'lucide-react';
+import { Loader2, RefreshCw } from 'lucide-react';
 
 const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<Member | null>(null);
@@ -21,6 +21,7 @@ const App: React.FC = () => {
   const [isLoaded, setIsLoaded] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [syncStatus, setSyncStatus] = useState<'synced' | 'saving' | 'error'>('synced');
+  const [loadingError, setLoadingError] = useState<string | null>(null);
   
   // -- Global Settings --
   const [settings, setSettings] = useState<GlobalSettings>({
@@ -202,7 +203,7 @@ const App: React.FC = () => {
           name: data.name,
           rank: Rank.B,
           position: position,
-          password: password || '', // Ensure empty string instead of undefined
+          password: password || '', // Ensure empty string instead of undefined to force column creation
           memberType: data.type as '정회원' | '준회원',
           birthDate: birthDate,
           joinDate: data.joinDate,
@@ -277,39 +278,64 @@ const App: React.FC = () => {
   useEffect(() => {
     const initData = async () => {
         setIsLoading(true);
-        const data = await loadAllData();
-        
-        if (data && data.members && data.members.length > 0) {
-            // Apply password fallback for executives if missing in the sheet
-            const processedMembers = data.members.map(m => {
-                const isExec = ['회장', '부회장', '이사', '국장', '감사', '총무', '재무', '고문', '임원'].some(role => m.position?.includes(role));
-                if (isExec && (!m.password || m.password.trim() === '')) {
-                    return { ...m, password: '1234' };
-                }
-                return { ...m, password: m.password || '' }; // Ensure password field exists
-            });
-            setMembers(processedMembers);
-            setMatches(data.matches || []);
-            setExpenses(data.expenses || []);
-            setDonations(data.donations || []);
-            setNotices(data.notices || []);
-            setAttendanceRecords(data.attendance || []);
-            if (data.settings) setSettings(prev => ({...prev, ...data.settings}));
+        setLoadingError(null);
 
-            // Transform financial array back to Record object
-            const recordsObj: Record<string, FinancialRecord> = {};
-            if (Array.isArray(data.financialRecords)) {
-                data.financialRecords.forEach((rec: any) => {
-                    recordsObj[rec.memberId] = rec;
+        try {
+            // Race condition: Timeout after 15 seconds if data not loaded
+            const timeoutPromise = new Promise<null>((_, reject) => 
+                setTimeout(() => reject(new Error("Timeout")), 15000)
+            );
+
+            const dataPromise = loadAllData();
+            
+            // Wait for either data or timeout
+            const data = await Promise.race([dataPromise, timeoutPromise]);
+            
+            if (data && data.members && data.members.length > 0) {
+                // Apply password fallback for executives if missing in the sheet
+                const processedMembers = data.members.map(m => {
+                    const isExec = ['회장', '부회장', '이사', '국장', '감사', '총무', '재무', '고문', '임원'].some(role => m.position?.includes(role));
+                    
+                    // Safe string conversion to fix "trim is not a function" error
+                    const passwordStr = m.password !== undefined && m.password !== null ? String(m.password) : '';
+                    
+                    if (isExec && passwordStr.trim() === '') {
+                        return { ...m, password: '1234' };
+                    }
+                    // Important: Explicitly set empty string if password is null/undefined
+                    return { ...m, password: passwordStr }; 
                 });
+                setMembers(processedMembers);
+                setMatches(data.matches || []);
+                setExpenses(data.expenses || []);
+                setDonations(data.donations || []);
+                setNotices(data.notices || []);
+                setAttendanceRecords(data.attendance || []);
+                if (data.settings) setSettings(prev => ({...prev, ...data.settings}));
+
+                // Transform financial array back to Record object
+                const recordsObj: Record<string, FinancialRecord> = {};
+                if (Array.isArray(data.financialRecords)) {
+                    data.financialRecords.forEach((rec: any) => {
+                        recordsObj[rec.memberId] = rec;
+                    });
+                }
+                setFinancialRecords(recordsObj);
+            } else {
+                // If data is empty (first run with new sheet) or null
+                console.log("No data found or empty sheet. Generating demo data.");
+                await generateDemoData();
             }
-            setFinancialRecords(recordsObj);
-        } else {
-            // If data is empty (first run with new sheet), generate and upload demo data
+        } catch (error) {
+            console.error("Initialization Error or Timeout:", error);
+            // In case of timeout or error, we still want to show something or allow user to interact
+            // Fallback to demo data so app is usable
             await generateDemoData();
+            setLoadingError("서버 응답이 늦어 데모 데이터로 실행됩니다. (데이터 동기화 실패)");
+        } finally {
+            setIsLoaded(true);
+            setIsLoading(false);
         }
-        setIsLoaded(true);
-        setIsLoading(false);
     };
 
     initData();
@@ -428,8 +454,24 @@ const App: React.FC = () => {
 
   // If not logged in, show Landing Page
   if (!currentUser) {
-      if (isLoading) return <div className="h-screen flex items-center justify-center flex-col gap-4 bg-slate-900 text-white"><Loader2 className="w-10 h-10 animate-spin text-orange-500"/><p>서버와 데이터를 동기화 중입니다...</p><p className="text-xs text-slate-500">최초 실행 시 데이터 생성에 시간이 걸릴 수 있습니다.</p></div>;
-      return <LandingPage members={members} onLogin={setCurrentUser} />;
+      if (isLoading) return (
+          <div className="h-screen flex items-center justify-center flex-col gap-4 bg-slate-900 text-white">
+              <Loader2 className="w-10 h-10 animate-spin text-orange-500"/>
+              <p>서버와 데이터를 동기화 중입니다...</p>
+              <p className="text-xs text-slate-500">최대 15초가 소요될 수 있습니다.</p>
+          </div>
+      );
+      
+      return (
+        <>
+            {loadingError && (
+                <div className="fixed top-0 left-0 right-0 bg-red-600 text-white text-xs p-2 text-center z-50">
+                    {loadingError}
+                </div>
+            )}
+            <LandingPage members={members} onLogin={setCurrentUser} />
+        </>
+      );
   }
 
   return (
