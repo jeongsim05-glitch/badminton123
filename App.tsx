@@ -167,17 +167,17 @@ const App: React.FC = () => {
     const weekDays = ['월', '화', '수', '목', '금'];
 
     const executiveMap: Record<string, string> = {
-        '장경진': '임원',
-        '채동호': '임원',
-        '김동주': '임원',
-        '김성남': '임원',
-        '김현민': '임원',
-        '김중진': '임원',
-        '박미화': '임원',
-        '배수미': '임원',
-        '김순희': '임원',
-        '우명자': '임원',
-        '김현종': '임원'
+        '장경진': '회장',
+        '채동호': '총무',
+        '김동주': '재무',
+        '김성남': '경기이사',
+        '김현민': '홍보이사',
+        '김중진': '관리이사',
+        '박미화': '여성부회장',
+        '배수미': '감사',
+        '김순희': '감사',
+        '우명자': '고문',
+        '김현종': '자문위원'
     };
 
     rawData.forEach((data, index) => {
@@ -280,7 +280,15 @@ const App: React.FC = () => {
         const data = await loadAllData();
         
         if (data && data.members && data.members.length > 0) {
-            setMembers(data.members || []);
+            // Apply password fallback for executives if missing in the sheet
+            const processedMembers = data.members.map(m => {
+                const isExec = ['회장', '부회장', '이사', '국장', '감사', '총무', '재무', '고문', '임원'].some(role => m.position?.includes(role));
+                if (isExec && (!m.password || m.password.trim() === '')) {
+                    return { ...m, password: '1234' };
+                }
+                return m;
+            });
+            setMembers(processedMembers);
             setMatches(data.matches || []);
             setExpenses(data.expenses || []);
             setDonations(data.donations || []);
