@@ -202,7 +202,7 @@ const App: React.FC = () => {
           name: data.name,
           rank: Rank.B,
           position: position,
-          password: password,
+          password: password || '', // Ensure empty string instead of undefined
           memberType: data.type as '정회원' | '준회원',
           birthDate: birthDate,
           joinDate: data.joinDate,
@@ -286,7 +286,7 @@ const App: React.FC = () => {
                 if (isExec && (!m.password || m.password.trim() === '')) {
                     return { ...m, password: '1234' };
                 }
-                return m;
+                return { ...m, password: m.password || '' }; // Ensure password field exists
             });
             setMembers(processedMembers);
             setMatches(data.matches || []);
@@ -328,7 +328,12 @@ const App: React.FC = () => {
 
   useEffect(() => {
       if (!isLoaded) return;
-      debouncedSave('members', members);
+      // Ensure password field exists for all members to force column creation in Sheet
+      const dataToSave = members.map(m => ({
+          ...m,
+          password: m.password || '' 
+      }));
+      debouncedSave('members', dataToSave);
   }, [members, isLoaded]);
 
   useEffect(() => {
